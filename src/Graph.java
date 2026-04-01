@@ -1,10 +1,7 @@
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -34,24 +31,18 @@ public class Graph {
         }
     }
 
-    public boolean addEdge(int from, int to) {
+    public void addEdge(int from, int to) {
         addVertex(from);
         addVertex(to);
 
         if (outgoing.get(from).add(to)) {
             incoming.get(to).add(from);
             outDegree.put(from, outDegree.get(from) + 1);
-            return true;
         }
-        return false;
     }
 
     public boolean containsVertex(int vertex) {
         return outgoing.containsKey(vertex);
-    }
-
-    public boolean containsEdge(int from, int to) {
-        return outgoing.containsKey(from) && outgoing.get(from).contains(to);
     }
 
     public int vertexCount() {
@@ -97,16 +88,6 @@ public class Graph {
         return sinks;
     }
 
-    public Integer removeOneSink() {
-        List<Integer> sinks = getSinks();
-        if (sinks.isEmpty()) {
-            return null;
-        }
-        int sink = sinks.get(0);
-        removeVertex(sink);
-        return sink;
-    }
-
     public void removeVertex(int vertex) {
         if (!containsVertex(vertex)) {
             return;
@@ -138,35 +119,5 @@ public class Graph {
             }
         }
         return copy;
-    }
-
-    public List<Integer> eliminateSinks() {
-        Graph working = deepCopy();
-        Deque<Integer> queue = new ArrayDeque<>(working.getSinks());
-        List<Integer> order = new ArrayList<>();
-        Set<Integer> queued = new HashSet<>(queue);
-
-        while (!queue.isEmpty()) {
-            int sink = queue.removeFirst();
-            queued.remove(sink);
-            if (!working.containsVertex(sink) || working.getOutDegree(sink) != 0) {
-                continue;
-            }
-
-            List<Integer> predecessors = new ArrayList<>(working.getIncomingNeighbours(sink));
-            working.removeVertex(sink);
-            order.add(sink);
-
-            Collections.sort(predecessors);
-            for (int predecessor : predecessors) {
-                if (working.containsVertex(predecessor)
-                        && working.getOutDegree(predecessor) == 0
-                        && queued.add(predecessor)) {
-                    queue.addLast(predecessor);
-                }
-            }
-        }
-
-        return order;
     }
 }

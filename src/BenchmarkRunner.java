@@ -17,21 +17,21 @@ public final class BenchmarkRunner {
 
         Graph warmupGraph = generateAcyclicGraph(500);
         for (int i = 0; i < 10; i++) {
-            CycleChecker.analyze(warmupGraph);
+            CycleChecker.analyze(warmupGraph, false);
         }
 
         for (int size : sizes) {
             Graph graph = generateAcyclicGraph(size);
 
             for (int i = 0; i < 3; i++) {
-                CycleChecker.analyze(graph);
+                CycleChecker.analyze(graph, false);
             }
 
             int runs = 5;
             long totalNs = 0;
             for (int i = 0; i < runs; i++) {
                 long start = System.nanoTime();
-                CycleChecker.analyze(graph);
+                CycleChecker.analyze(graph, false);
                 totalNs += System.nanoTime() - start;
             }
 

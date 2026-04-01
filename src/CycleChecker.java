@@ -13,6 +13,10 @@ public final class CycleChecker {
     }
 
     public static AnalysisResult analyze(Graph originalGraph) {
+        return analyze(originalGraph, true);
+    }
+
+    public static AnalysisResult analyze(Graph originalGraph, boolean captureTrace) {
         Graph workingGraph = originalGraph.deepCopy();
         Deque<Integer> sinkQueue = new ArrayDeque<>(workingGraph.getSinks());
         Set<Integer> queued = new HashSet<>(sinkQueue);
@@ -20,10 +24,12 @@ public final class CycleChecker {
         List<String> trace = new ArrayList<>();
         List<Integer> eliminationOrder = new ArrayList<>();
 
-        trace.add("Starting sink elimination.");
-        trace.add("Initial graph: " + originalGraph.vertexCount() + " vertices, "
-                + originalGraph.edgeCount() + " edges.");
-        trace.add("Initial sinks: " + formatList(new ArrayList<>(sinkQueue)) + ".");
+        addTrace(trace, captureTrace, "Starting sink elimination.");
+        addTrace(trace, captureTrace,
+                "Initial graph: " + originalGraph.vertexCount() + " vertices, "
+                        + originalGraph.edgeCount() + " edges.");
+        addTrace(trace, captureTrace,
+                "Initial sinks: " + formatList(new ArrayList<>(sinkQueue)) + ".");
 
         while (!sinkQueue.isEmpty()) {
             int sink = sinkQueue.removeFirst();
@@ -38,7 +44,9 @@ public final class CycleChecker {
 
             List<Integer> predecessors = new ArrayList<>(workingGraph.getIncomingNeighbours(sink));
             Collections.sort(predecessors);
-            trace.add("Eliminating sink " + sink + ". Predecessors: " + formatList(predecessors) + ".");
+
+            addTrace(trace, captureTrace,
+                    "Eliminating sink " + sink + ". Predecessors: " + formatList(predecessors) + ".");
 
             workingGraph.removeVertex(sink);
             eliminationOrder.add(sink);
@@ -54,34 +62,56 @@ public final class CycleChecker {
             }
 
             Collections.sort(newSinks);
-            trace.add("New sinks added to queue: " + formatList(newSinks) + ".");
-            trace.add("Remaining vertices: " + formatList(new ArrayList<>(workingGraph.getVertices())) + ".");
+            addTrace(trace, captureTrace,
+                    "New sinks added to queue: " + formatList(newSinks) + ".");
+            addTrace(trace, captureTrace,
+                    "Remaining vertices: " + formatList(new ArrayList<>(workingGraph.getVertices())) + ".");
         }
 
         if (workingGraph.isEmpty()) {
-            trace.add("All vertices were eliminated. The graph is acyclic.");
-            return new AnalysisResult(true, eliminationOrder, null, trace,  originalGraph.vertexCount(), 0);
+            addTrace(trace, captureTrace,
+                    "All vertices were eliminated. The graph is acyclic.");
+            return new AnalysisResult(
+                    true,
+                    eliminationOrder,
+                    null,
+                    trace,
+                    originalGraph.vertexCount(),
+                    0
+            );
         }
 
         List<Integer> remainingVertices = new ArrayList<>(workingGraph.getVertices());
         Collections.sort(remainingVertices);
-        trace.add("No sink remains, but vertices are still present: " + formatList(remainingVertices) + ".");
-        trace.add("Therefore the graph is cyclic.");
+
+        addTrace(trace, captureTrace,
+                "No sink remains, but vertices are still present: " + formatList(remainingVertices) + ".");
+        addTrace(trace, captureTrace,
+                "Therefore the graph is cyclic.");
 
         List<Integer> cycle = findCycle(workingGraph);
         if (cycle != null) {
-            trace.add("Cycle found: " + formatCycle(cycle) + ".");
+            addTrace(trace, captureTrace,
+                    "Cycle found: " + formatCycle(cycle) + ".");
         } else {
-            trace.add("A cycle should exist, but DFS did not reconstruct one.");
+            addTrace(trace, captureTrace,
+                    "A cycle should exist, but DFS did not reconstruct one.");
         }
 
-        return new AnalysisResult(false, eliminationOrder, cycle, trace,
-                originalGraph.vertexCount(), workingGraph.vertexCount());
+        return new AnalysisResult(
+                false,
+                eliminationOrder,
+                cycle,
+                trace,
+                originalGraph.vertexCount(),
+                workingGraph.vertexCount()
+        );
     }
 
     public static List<Integer> findCycle(Graph graph) {
         Map<Integer, Integer> colour = new HashMap<>();
         Map<Integer, Integer> parent = new HashMap<>();
+
         for (int vertex : graph.getVertices()) {
             colour.put(vertex, 0);
         }
@@ -95,17 +125,22 @@ public final class CycleChecker {
                 return reconstructCycle(parent, state.start, state.end);
             }
         }
+
         return null;
     }
 
-    private static boolean dfs(int vertex, Graph graph, Map<Integer, Integer> colour,
-                               Map<Integer, Integer> parent, CycleState state) {
+    private static boolean dfs(int vertex, Graph graph,
+                               Map<Integer, Integer> colour,
+                               Map<Integer, Integer> parent,
+                               CycleState state) {
         colour.put(vertex, 1);
+
         List<Integer> neighbours = new ArrayList<>(graph.getOutgoingNeighbours(vertex));
         Collections.sort(neighbours);
 
         for (int neighbour : neighbours) {
             int neighbourColour = colour.getOrDefault(neighbour, 0);
+
             if (neighbourColour == 0) {
                 parent.put(neighbour, vertex);
                 if (dfs(neighbour, graph, colour, parent, state)) {
@@ -131,6 +166,7 @@ public final class CycleChecker {
             cycle.add(current);
             current = parent.get(current);
         }
+
         cycle.add(start);
         Collections.reverse(cycle);
         return cycle;
@@ -140,6 +176,7 @@ public final class CycleChecker {
         if (cycle == null || cycle.isEmpty()) {
             return "none";
         }
+
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < cycle.size(); i++) {
             if (i > 0) {
@@ -158,6 +195,12 @@ public final class CycleChecker {
         return values.toString();
     }
 
+    private static void addTrace(List<String> trace, boolean captureTrace, String message) {
+        if (captureTrace) {
+            trace.add(message);
+        }
+    }
+
     private static final class CycleState {
         private Integer start;
         private Integer end;
@@ -168,16 +211,18 @@ public final class CycleChecker {
         private final List<Integer> eliminationOrder;
         private final List<Integer> cycle;
         private final List<String> trace;
-        private final int totalVertices;
         private final int remainingVertices;
 
-        public AnalysisResult(boolean acyclic, List<Integer> eliminationOrder, List<Integer> cycle,
-                              List<String> trace, int totalVertices, int remainingVertices) {
+        public AnalysisResult(boolean acyclic,
+                              List<Integer> eliminationOrder,
+                              List<Integer> cycle,
+                              List<String> trace,
+                              int totalVertices,
+                              int remainingVertices) {
             this.acyclic = acyclic;
             this.eliminationOrder = new ArrayList<>(eliminationOrder);
             this.cycle = cycle == null ? null : new ArrayList<>(cycle);
             this.trace = new ArrayList<>(trace);
-            this.totalVertices = totalVertices;
             this.remainingVertices = remainingVertices;
         }
 
@@ -195,10 +240,6 @@ public final class CycleChecker {
 
         public List<String> getTrace() {
             return new ArrayList<>(trace);
-        }
-
-        public int getTotalVertices() {
-            return totalVertices;
         }
 
         public int getRemainingVertices() {
